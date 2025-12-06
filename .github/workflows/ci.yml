@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  Test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch head
+        uses: actions/checkout@v5
+
+      - name: Fetch Boost package index
+        uses: actions/checkout@v5
+        with:
+          repository: grisumbras/boost-conan-index
+          ref: index
+          path: boost-packages
+
+      - name: Setup Conan and install dependencies
+        run: |
+          set -ex
+
+          pip install -r .github/workflows/requirements.txt
+          conan remote add boost-conan-index ./boost-packages
+          conan install .github/workflows/conanfile.py  -of . \
+            --build=missing -pr .github/workflows/profile
+
+      - name: Test
+        run: |
+            set -ex
+
+            . build/generators/conanbuild.sh
+            b2 --project-config=build/generators/project-config.jam
+            . build/generators/deactivate_conanbuild.sh
